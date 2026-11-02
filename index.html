@@ -706,12 +706,27 @@ async function signSend(ph,tx,from,bh){const errs=[],stop=e=>e&&(e.code===4001||
     return await rpc('sendTransaction',[btoa(b),{encoding:'base64',preflightCommitment:'confirmed'}])}catch(e){if(stop(e))throw e;errs.push('B: '+(e.message||e))}
   try{shopMsg('Dritter Versuch …');const m=new solanaWeb3.TransactionMessage({payerKey:from,recentBlockhash:bh,instructions:tx.instructions}).compileToV0Message(),r=await ph.signAndSendTransaction(new solanaWeb3.VersionedTransaction(m));return r.signature||r}catch(e){if(stop(e))throw e;errs.push('C: '+(e.message||e))}
   throw new Error('Alle Versuche fehlgeschlagen – '+errs.join(' | '))}
+const B58='123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+function b58(u){let d=[0];for(const b of u){let c=b;for(let i=0;i<d.length;i++){c+=d[i]<<8;d[i]=c%58;c=c/58|0}while(c){d.push(c%58);c=c/58|0}}let r='';for(const b of u){if(b)break;r+='1'}for(let i=d.length-1;i>=0;i--)r+=B58[d[i]];return r}
+async function wsPhantom(){const ws=[],api={register:(...a)=>{ws.push(...a);return()=>{}}};
+  window.addEventListener('wallet-standard:register-wallet',e=>{try{e.detail(api)}catch(x){}});
+  window.dispatchEvent(new CustomEvent('wallet-standard:app-ready',{detail:api}));
+  await new Promise(r=>setTimeout(r,400));return ws.find(w=>/phantom/i.test(w.name))||null}
+async function wsSend(W,acct,tx){const f=W.features['solana:signAndSendTransaction'];if(!f)throw new Error('Phantom unterstützt diesen Zahlungsweg nicht');
+  const out=await f.signAndSendTransaction({account:acct,chain:'solana:mainnet',transaction:tx.serialize({requireAllSignatures:false,verifySignatures:false})});
+  return b58(out[0].signature)}
 async function pay(chf){
   const ph=await getPhantom();
   if(!ph){if(location.protocol==='file:')shopMsg('Phantom funktioniert nicht bei lokal geöffneten Dateien (file://). Das klappt erst, wenn das Spiel auf deiner Webseite (https) liegt.');
     else shopMsg('Phantom nicht gefunden. Installiere die Phantom-Erweiterung – oder am Handy:','<a href="https://phantom.app/ul/browse/'+encodeURIComponent(location.href)+'?ref='+encodeURIComponent(location.origin)+'">in der Phantom-App öffnen</a>');return false}
   if(!window.solanaWeb3){shopMsg('Solana-Bibliothek nicht geladen (Internet / Adblock?).');return false}
-  shopMsg('Verbinde Phantom …');STAGE='Verbinden';let r0;try{r0=await ph.connect()}catch(e){if(e&&e.code===4001)throw e;try{r0=await ph.request({method:'connect'})}catch(e2){throw new Error('Phantom-Verbindung fehlgeschlagen ('+((e2&&e2.message)||e2)+'). Ist Phantom entsperrt? Schalte andere Wallet-Erweiterungen (Brave Wallet, MetaMask) kurz aus.')}}const from=new solanaWeb3.PublicKey((r0&&r0.publicKey||ph.publicKey).toString());
+  shopMsg('Verbinde Phantom …');STAGE='Verbinden';let r0,W=null,acct=null;
+  try{r0=await ph.connect()}catch(e){if(e&&e.code===4001)throw e;
+    try{r0=await ph.request({method:'connect'})}catch(e2){
+      shopMsg('Zweiter Verbindungsweg …');W=await wsPhantom();
+      if(!W||!W.features['standard:connect'])throw new Error('Phantom-Verbindung fehlgeschlagen ('+((e2&&e2.message)||e2)+'). Ist Phantom entsperrt? Schalte andere Wallet-Erweiterungen (Brave Wallet, MetaMask) kurz aus.');
+      const c=await W.features['standard:connect'].connect();acct=(c&&c.accounts&&c.accounts[0])||(W.accounts&&W.accounts[0]);if(!acct)throw new Error('Kein Phantom-Konto ausgewählt')}}
+  const from=new solanaWeb3.PublicKey(W?acct.address:(r0&&r0.publicKey||ph.publicKey).toString());
   STAGE='Kurs';shopMsg('Kurs wird geladen …');const px=await chfPerSol(),lam=Math.ceil(chf/px*solanaWeb3.LAMPORTS_PER_SOL);
   STAGE='Guthaben';const bal=(await rpc('getBalance',[from.toString()])).value;
   if(bal<lam+15000){shopMsg('Zu wenig SOL im Wallet: nötig ca. '+((lam+15000)/1e9).toFixed(5)+' SOL, vorhanden '+(bal/1e9).toFixed(5)+' SOL. Prüfe auch, dass Phantom auf Solana Mainnet steht (nicht Testnet/Devnet).');return false}
@@ -719,7 +734,7 @@ async function pay(chf){
   const tx=new solanaWeb3.Transaction();tx.recentBlockhash=bh;tx.feePayer=from;
   tx.add(solanaWeb3.SystemProgram.transfer({fromPubkey:from,toPubkey:new solanaWeb3.PublicKey(PAY_TO),lamports:lam}));
   shopMsg('In Phantom bestätigen: '+(lam/1e9).toFixed(5)+' SOL (≈ '+chf.toFixed(2)+' CHF) …');
-  STAGE='Signieren';const sig=await signSend(ph,tx,from,bh);shopMsg('Warte auf Bestätigung …');
+  STAGE='Signieren';const sig=W?await wsSend(W,acct,tx):await signSend(ph,tx,from,bh);shopMsg('Warte auf Bestätigung …');
   STAGE='Bestätigung';for(let i=0;i<60;i++){await new Promise(r=>setTimeout(r,1500));let st;try{st=(await rpc('getSignatureStatuses',[[sig],{searchTransactionHistory:true}])).value[0]}catch(e){continue}
     if(st){if(st.err)throw new Error('Transaktion fehlgeschlagen');if(st.confirmationStatus==='confirmed'||st.confirmationStatus==='finalized')return true}}
   throw new Error('Bestätigung dauert zu lange – prüfe Phantom und versuche es erneut')}
