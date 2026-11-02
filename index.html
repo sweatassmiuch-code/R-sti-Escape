@@ -63,7 +63,7 @@ canvas{display:block;width:100%;height:100%}
 </style></head><body>
 <div id="jump"></div>
 <div id="cx"></div><div id="hit">ERWISCHT!</div><div id="hud"></div><div id="goal">COINS 0/15</div><div id="hp"><i></i><b style="left:20%"></b><b style="left:40%"></b><b style="left:60%"></b><b style="left:80%"></b></div><div id="toast"></div><div id="fade"></div><div id="flash"></div>
-<div id="shop"><div id="shopBox"><h3>SHOP</h3><div id="shopList"></div><div id="shopMsg"></div><div class="bt2" id="shopClose">Schliessen</div></div></div>
+<div id="shop"><div id="shopBox"><h3>SHOP</h3><div id="shopList"></div><div id="shopMsg"></div><div id="shopMan" style="display:none;font-size:.8rem;color:#ccc;margin-bottom:10px;padding:8px;border:1px dashed #7a0000"></div><div class="bt2" id="shopClose">Schliessen</div></div></div>
 <div id="over"><h2>GAME OVER</h2><p>5 Mal erwischt.</p><div class="bt2" id="ov1">Von vorne starten</div><div class="bt2" id="ov2">Hauptmenü</div></div>
 <div id="win"><h2>GESCHAFFT!</h2><p>Du bist entkommen.</p><div id="again">Nochmal spielen</div><div id="menu2">Hauptmenü</div></div>
 <div id="ov">
@@ -711,16 +711,16 @@ async function pay(chf){
   if(!ph){if(location.protocol==='file:')shopMsg('Phantom funktioniert nicht bei lokal geöffneten Dateien (file://). Das klappt erst, wenn das Spiel auf deiner Webseite (https) liegt.');
     else shopMsg('Phantom nicht gefunden. Installiere die Phantom-Erweiterung – oder am Handy:','<a href="https://phantom.app/ul/browse/'+encodeURIComponent(location.href)+'?ref='+encodeURIComponent(location.origin)+'">in der Phantom-App öffnen</a>');return false}
   if(!window.solanaWeb3){shopMsg('Solana-Bibliothek nicht geladen (Internet / Adblock?).');return false}
-  shopMsg('Verbinde Phantom …');const r0=await ph.connect(),from=new solanaWeb3.PublicKey((r0&&r0.publicKey||ph.publicKey).toString());
-  shopMsg('Kurs wird geladen …');const px=await chfPerSol(),lam=Math.ceil(chf/px*solanaWeb3.LAMPORTS_PER_SOL);
-  const bal=(await rpc('getBalance',[from.toString()])).value;
+  shopMsg('Verbinde Phantom …');STAGE='Verbinden';let r0;try{r0=await ph.connect()}catch(e){if(e&&e.code===4001)throw e;try{r0=await ph.request({method:'connect'})}catch(e2){throw new Error('Phantom-Verbindung fehlgeschlagen ('+((e2&&e2.message)||e2)+'). Ist Phantom entsperrt? Schalte andere Wallet-Erweiterungen (Brave Wallet, MetaMask) kurz aus.')}}const from=new solanaWeb3.PublicKey((r0&&r0.publicKey||ph.publicKey).toString());
+  STAGE='Kurs';shopMsg('Kurs wird geladen …');const px=await chfPerSol(),lam=Math.ceil(chf/px*solanaWeb3.LAMPORTS_PER_SOL);
+  STAGE='Guthaben';const bal=(await rpc('getBalance',[from.toString()])).value;
   if(bal<lam+15000){shopMsg('Zu wenig SOL im Wallet: nötig ca. '+((lam+15000)/1e9).toFixed(5)+' SOL, vorhanden '+(bal/1e9).toFixed(5)+' SOL. Prüfe auch, dass Phantom auf Solana Mainnet steht (nicht Testnet/Devnet).');return false}
   const bh=(await rpc('getLatestBlockhash',[{commitment:'confirmed'}])).value.blockhash;
   const tx=new solanaWeb3.Transaction();tx.recentBlockhash=bh;tx.feePayer=from;
   tx.add(solanaWeb3.SystemProgram.transfer({fromPubkey:from,toPubkey:new solanaWeb3.PublicKey(PAY_TO),lamports:lam}));
   shopMsg('In Phantom bestätigen: '+(lam/1e9).toFixed(5)+' SOL (≈ '+chf.toFixed(2)+' CHF) …');
-  const sig=await signSend(ph,tx,from,bh);shopMsg('Warte auf Bestätigung …');
-  for(let i=0;i<60;i++){await new Promise(r=>setTimeout(r,1500));let st;try{st=(await rpc('getSignatureStatuses',[[sig],{searchTransactionHistory:true}])).value[0]}catch(e){continue}
+  STAGE='Signieren';const sig=await signSend(ph,tx,from,bh);shopMsg('Warte auf Bestätigung …');
+  STAGE='Bestätigung';for(let i=0;i<60;i++){await new Promise(r=>setTimeout(r,1500));let st;try{st=(await rpc('getSignatureStatuses',[[sig],{searchTransactionHistory:true}])).value[0]}catch(e){continue}
     if(st){if(st.err)throw new Error('Transaktion fehlgeschlagen');if(st.confirmationStatus==='confirmed'||st.confirmationStatus==='finalized')return true}}
   throw new Error('Bestätigung dauert zu lange – prüfe Phantom und versuche es erneut')}
 let busy=false;
@@ -728,11 +728,21 @@ function shopRender(){const L=$('shopList');L.innerHTML='';
   ITEMS.forEach(it=>{const own=has(it.id),d=document.createElement('div');d.className='si';
     d.innerHTML='<div><b>'+it.name+'</b><br><span>'+it.desc+'</span></div><div class="sb'+(own?' own':'')+'" data-id="'+it.id+'">'+(own?'✓ Gekauft':it.chf.toFixed(2)+' CHF')+'</div>';L.appendChild(d)});
   L.querySelectorAll('.sb:not(.own)').forEach(b=>b.onclick=()=>buy(b.dataset.id))}
-async function buy(id){if(busy)return;busy=true;const it=ITEMS.find(x=>x.id===id);
-  try{if(await pay(it.chf)){OWN[id]=1;try{localStorage.setItem('shop_owned',JSON.stringify(OWN))}catch(e){}
-      if(id==='mega')MEGA=true;if(id==='vest'){HPMAX=8;hp=8;$('hp').firstChild.style.width='100%'}
-      shopMsg('✓ '+it.name+' gekauft!');shopRender()}}
-  catch(e){shopMsg('Abgebrochen/Fehler: '+((e&&e.message)||e)+(e&&e.code?' (Code '+e.code+')':''))}busy=false}
+let STAGE='';
+function grant(id,it){OWN[id]=1;try{localStorage.setItem('shop_owned',JSON.stringify(OWN))}catch(e){}if(id==='mega')MEGA=true;if(id==='vest'){HPMAX=8;hp=8;$('hp').firstChild.style.width='100%'}
+  $('shopMan').style.display='none';shopRender();shopMsg('✓ '+it.name+' gekauft!')}
+async function showManual(it){const px=await chfPerSol(),lam=Math.ceil(it.chf/px*1e9),box=$('shopMan');box.style.display='block';
+  box.innerHTML='<b>Manuell bezahlen: '+it.name+'</b><br>Sende genau <b>'+(lam/1e9).toFixed(5)+' SOL</b> (≈ '+it.chf.toFixed(2)+' CHF) an:<br><code style="word-break:break-all;color:#ffd23a">'+PAY_TO+'</code><br>Dann in Phantom → Aktivität → die Transaktion öffnen → <b>Signatur</b> kopieren und hier einfügen:<br><input id="sigIn" style="width:100%;margin:6px 0;padding:6px;background:#111;color:#fff;border:1px solid #7a0000"><div class="sb" id="sigChk" style="display:inline-block">Zahlung prüfen</div>';
+  $('sigChk').onclick=async()=>{try{const sg=$('sigIn').value.trim(),used=JSON.parse(localStorage.getItem('used_sigs')||'[]');if(!sg)return;
+    if(used.includes(sg)){shopMsg('Diese Signatur wurde schon benutzt.');return}
+    shopMsg('Prüfe Zahlung …');const tx=await rpc('getTransaction',[sg,{encoding:'jsonParsed',maxSupportedTransactionVersion:0,commitment:'confirmed'}]);
+    if(!tx||tx.meta.err){shopMsg('Transaktion nicht gefunden oder fehlgeschlagen. Kurz warten und nochmal prüfen.');return}
+    const ok=tx.transaction.message.instructions.some(x=>x.parsed&&x.parsed.type==='transfer'&&x.parsed.info.destination===PAY_TO&&x.parsed.info.lamports>=lam*.95);
+    if(!ok||Date.now()/1000-tx.blockTime>7200){shopMsg('Zahlung passt nicht (falsche Adresse, zu wenig oder zu alt).');return}
+    used.push(sg);localStorage.setItem('used_sigs',JSON.stringify(used));grant(it.id,it)}catch(e){shopMsg('Fehler bei der Prüfung: '+((e&&e.message)||e))}}}
+async function buy(id){if(busy)return;busy=true;const it=ITEMS.find(x=>x.id===id);STAGE='';
+  try{if(await pay(it.chf))grant(id,it);else showManual(it).catch(()=>{})}
+  catch(e){shopMsg('Fehler bei Schritt "'+STAGE+'": '+((e&&e.message)||e)+(e&&e.code?' (Code '+e.code+')':''));if(!(e&&e.code===4001))showManual(it).catch(()=>{})}busy=false}
 function openShop(){shopRender();shopMsg('Bezahlt wird mit SOL über Phantom, Preise in CHF zum aktuellen Kurs.');$('shop').style.display='flex'}
 $('shopBtn').onclick=e=>{e.stopPropagation();openShop()};$('shopClose').onclick=()=>{$('shop').style.display='none'};
 let hp=HPMAX,lost=false;
