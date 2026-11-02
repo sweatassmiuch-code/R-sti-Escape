@@ -752,8 +752,8 @@ async function showManual(it){const tok=++manTok,px=await chfPerSol(),lam=Math.c
   const bs='display:inline-block;margin:6px 6px 0 0;text-decoration:none;font-size:.8rem';
   box.style.display='block';
   box.innerHTML='<b>Bezahlen: '+it.name+'</b><br>Sende <b>genau '+amt+' SOL</b> (≈ '+it.chf.toFixed(2)+' CHF) an:<br><code style="word-break:break-all;color:#ffd23a">'+PAY_TO+'</code><br>'
-   +'<div class="sb" id="cpA" style="'+bs+'">Adresse kopieren</div><div class="sb" id="cpB" style="'+bs+'">Betrag kopieren</div><a class="sb" style="'+bs+'" href="solana:'+PAY_TO+'?amount='+amt+'&label=Roesti&message='+encodeURIComponent(it.name)+'">In Phantom öffnen</a><br>'
-   +'<div style="margin-top:8px">Phantom öffnen → <b>Senden</b> → Adresse und genau diesen Betrag eintragen. Das Spiel erkennt die Zahlung <b>automatisch</b> (bis 15 Min.).</div><div id="manSt" style="margin:6px 0;color:#ffd23a">Warte auf Zahlung …</div>'
+   +'<div class="sb" id="cpA" style="'+bs+'">Adresse kopieren</div><div class="sb" id="cpB" style="'+bs+'">Betrag kopieren</div>'+(/Android|iPhone|iPad/i.test(navigator.userAgent)?'<a class="sb" style="'+bs+'" href="solana:'+PAY_TO+'?amount='+amt+'&label=Roesti&message='+encodeURIComponent(it.name)+'">In Phantom öffnen</a>':'')+'<br>'
+   +'<div style="margin-top:8px">Phantom selbst öffnen (Symbol oben im Browser, evtl. unter dem Puzzle-Teil) → <b>Senden</b> → Adresse und genau diesen Betrag eintragen. Das Spiel erkennt die Zahlung <b>automatisch</b> (bis 15 Min.).</div><div id="manSt" style="margin:6px 0;color:#ffd23a">Warte auf Zahlung …</div>'
    +'<details><summary>Oder Signatur einfügen</summary><input id="sigIn" style="width:100%;margin:6px 0;padding:6px;background:#111;color:#fff;border:1px solid #7a0000"><div class="sb" id="sigChk" style="'+bs+'">Zahlung prüfen</div></details>';
   const cp=(id,t)=>{$(id).onclick=()=>{try{navigator.clipboard.writeText(t);$(id).textContent='Kopiert ✓'}catch(e){}}};cp('cpA',PAY_TO);cp('cpB',amt);
   $('sigChk').onclick=async()=>{try{const sg=$('sigIn').value.trim();if(!sg)return;if(used().includes(sg)){shopMsg('Diese Signatur wurde schon benutzt.');return}
