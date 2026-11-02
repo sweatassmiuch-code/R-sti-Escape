@@ -722,9 +722,9 @@ async function pay(chf){
   if(!window.solanaWeb3){shopMsg('Solana-Bibliothek nicht geladen (Internet / Adblock?).');return false}
   shopMsg('Verbinde Phantom …');STAGE='Verbinden';let r0,W=null,acct=null;
   try{r0=await ph.connect()}catch(e){if(e&&e.code===4001)throw e;
-    try{r0=await ph.request({method:'connect'})}catch(e2){
+    try{try{await ph.disconnect()}catch(x){}r0=await ph.connect()}catch(e2){
       shopMsg('Zweiter Verbindungsweg …');W=await wsPhantom();
-      if(!W||!W.features['standard:connect'])throw new Error('Phantom-Verbindung fehlgeschlagen ('+((e2&&e2.message)||e2)+'). Ist Phantom entsperrt? Schalte andere Wallet-Erweiterungen (Brave Wallet, MetaMask) kurz aus.');
+      if(!W||!W.features['standard:connect'])throw new Error('Phantom-Verbindung fehlgeschlagen ('+((e2&&e2.message)||e2)+'). Ist Phantom entsperrt? Schalte andere Wallet-Erweiterungen (Brave Wallet, MetaMask) kurz aus. [Seite: '+location.origin+']');
       const c=await W.features['standard:connect'].connect();acct=(c&&c.accounts&&c.accounts[0])||(W.accounts&&W.accounts[0]);if(!acct)throw new Error('Kein Phantom-Konto ausgewählt')}}
   const from=new solanaWeb3.PublicKey(W?acct.address:(r0&&r0.publicKey||ph.publicKey).toString());
   STAGE='Kurs';shopMsg('Kurs wird geladen …');const px=await chfPerSol(),lam=Math.ceil(chf/px*solanaWeb3.LAMPORTS_PER_SOL);
