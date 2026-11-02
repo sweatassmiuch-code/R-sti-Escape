@@ -716,13 +716,13 @@ async function wsSend(W,acct,tx){const f=W.features['solana:signAndSendTransacti
   const out=await f.signAndSendTransaction({account:acct,chain:'solana:mainnet',transaction:tx.serialize({requireAllSignatures:false,verifySignatures:false})});
   return b58(out[0].signature)}
 async function pay(chf){
-  const ph=await getPhantom();
+  const ph=(window.phantom&&window.phantom.solana&&window.phantom.solana.isPhantom)?window.phantom.solana:await getPhantom();
   if(!ph){if(location.protocol==='file:')shopMsg('Phantom funktioniert nicht bei lokal geöffneten Dateien (file://). Das klappt erst, wenn das Spiel auf deiner Webseite (https) liegt.');
     else shopMsg('Phantom nicht gefunden. Installiere die Phantom-Erweiterung – oder am Handy:','<a href="https://phantom.app/ul/browse/'+encodeURIComponent(location.href)+'?ref='+encodeURIComponent(location.origin)+'">in der Phantom-App öffnen</a>');return false}
   if(!window.solanaWeb3){shopMsg('Solana-Bibliothek nicht geladen (Internet / Adblock?).');return false}
   shopMsg('Verbinde Phantom …');STAGE='Verbinden';let r0,W=null,acct=null;
   try{r0=await ph.connect()}catch(e){if(e&&e.code===4001)throw e;
-    try{try{await ph.disconnect()}catch(x){}r0=await ph.connect()}catch(e2){
+    try{r0=await ph.connect()}catch(e2){
       shopMsg('Zweiter Verbindungsweg …');W=await wsPhantom();
       if(!W||!W.features['standard:connect'])throw new Error('Phantom-Verbindung fehlgeschlagen ('+((e2&&e2.message)||e2)+'). Ist Phantom entsperrt? Schalte andere Wallet-Erweiterungen (Brave Wallet, MetaMask) kurz aus. [Seite: '+location.origin+']');
       const c=await W.features['standard:connect'].connect();acct=(c&&c.accounts&&c.accounts[0])||(W.accounts&&W.accounts[0]);if(!acct)throw new Error('Kein Phantom-Konto ausgewählt')}}
@@ -744,6 +744,7 @@ function shopRender(){const L=$('shopList');L.innerHTML='';
     d.innerHTML='<div><b>'+it.name+'</b><br><span>'+it.desc+'</span></div><div class="sb'+(own?' own':'')+'" data-id="'+it.id+'">'+(own?'✓ Gekauft':it.chf.toFixed(2)+' CHF')+'</div>';L.appendChild(d)});
   L.querySelectorAll('.sb:not(.own)').forEach(b=>b.onclick=()=>buy(b.dataset.id))}
 let STAGE='';
+function diag(){const p=window.phantom&&window.phantom.solana,w=window.solana;return ' ['+location.origin+' | Phantom='+(p&&p.isPhantom?'ja':'nein')+' | window.solana='+(w?(w.isPhantom?'Phantom':w.isBraveWallet?'BraveWallet':'andere'):'keine')+']'}
 function grant(id,it){OWN[id]=1;try{localStorage.setItem('shop_owned',JSON.stringify(OWN))}catch(e){}if(id==='mega')MEGA=true;if(id==='vest'){HPMAX=8;hp=8;$('hp').firstChild.style.width='100%'}
   $('shopMan').style.display='none';shopRender();shopMsg('✓ '+it.name+' gekauft!')}
 let manTok=0;
@@ -770,7 +771,7 @@ async function showManual(it){const tok=++manTok,px=await chfPerSol(),lam=Math.c
     await new Promise(r=>setTimeout(r,4000))}}
 async function buy(id){if(busy)return;busy=true;const it=ITEMS.find(x=>x.id===id);STAGE='';
   try{if(await pay(it.chf))grant(id,it);else showManual(it).catch(()=>{})}
-  catch(e){shopMsg('Fehler bei Schritt "'+STAGE+'": '+((e&&e.message)||e)+(e&&e.code?' (Code '+e.code+')':''));if(!(e&&e.code===4001))showManual(it).catch(()=>{})}busy=false}
+  catch(e){shopMsg('Fehler bei Schritt "'+STAGE+'": '+((e&&e.message)||e)+(e&&e.code?' (Code '+e.code+')':'')+(STAGE==='Verbinden'?diag():''));if(!(e&&e.code===4001))showManual(it).catch(()=>{})}busy=false}
 function openShop(){shopRender();shopMsg('Bezahlt wird mit SOL über Phantom, Preise in CHF zum aktuellen Kurs.');$('shop').style.display='flex'}
 $('shopBtn').onclick=e=>{e.stopPropagation();openShop()};$('shopClose').onclick=()=>{$('shop').style.display='none'};
 let hp=HPMAX,lost=false;
