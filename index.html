@@ -73,7 +73,7 @@ canvas{display:block;width:100%;height:100%}
 <button id="dm" class="bt" type="button">Death Mode</button>
 <h1 id="ttl">Rösti<br>Escape</h1>
 <p id="st" style="display:none">Lade Map …</p><div class="bar" id="bar"></div>
-<div id="help"><div class="item" id="m0" style="cursor:pointer"><span class="arr">&gt;&gt;</span>1 &middot; City of the Night</div><div class="item" id="m1" style="cursor:pointer"><span class="arr">&gt;&gt;</span>2 &middot; Streets of Crime (Horde)</div><div class="item" style="font-size:clamp(.8rem,1.5vw,1.25rem);color:#aaa;margin-top:.5em;padding-left:3.6ch">Map w&auml;hlen: Klick oder Taste 1 / 2</div><div class="item" id="shopBtn" style="cursor:pointer;margin-top:.7em;font-size:clamp(.9rem,1.9vw,1.6rem);color:#ffd23a;text-shadow:0 0 10px rgba(255,200,0,.6)"><span class="arr">&gt;&gt;</span>SHOP &ndash; Powerups (Phantom / Solana)</div></div>
+<div id="help"><div class="item" id="m0" style="cursor:pointer"><span class="arr">&gt;&gt;</span>1 &middot; City of the Night</div><div class="item" id="m1" style="cursor:pointer"><span class="arr">&gt;&gt;</span>2 &middot; Streets of Crime (Horde)</div><div class="item" id="m2" style="cursor:pointer"><span class="arr">&gt;&gt;</span>3 &middot; Streets of Crime (Build)</div><div class="item" style="font-size:clamp(.8rem,1.5vw,1.25rem);color:#aaa;margin-top:.5em;padding-left:3.6ch">Map w&auml;hlen: Klick oder Taste 1 / 2</div><div class="item" id="shopBtn" style="cursor:pointer;margin-top:.7em;font-size:clamp(.9rem,1.9vw,1.6rem);color:#ffd23a;text-shadow:0 0 10px rgba(255,200,0,.6)"><span class="arr">&gt;&gt;</span>SHOP &ndash; Powerups (Phantom / Solana)</div></div>
 <div class="ver">v 1.0</div><div class="cr">©2026 Rösti Escape</div>
 </div>
 <script>
@@ -670,10 +670,10 @@ function buildGrid(root,box){
 // ===== Maps / Horde / Emote =====
 let MAPIDX=-1,HORDE=false,emoting=false,emoPrev=false;const HN=30,EN=[];let hT=0,hSpawnT=2,hKills=0;
 const HELP_PLAY='<div class="item"><span class="arr">&gt;&gt;</span>Play</div><div class="item" style="font-size:clamp(.8rem,1.5vw,1.25rem);color:#aaa;margin-top:.5em;padding-left:3.6ch">Q &ndash; Kamera &middot; E &ndash; Emote/Tanz (nochmal E = Stopp) &middot; Esc = Pause</div><div class="item" style="cursor:pointer;margin-top:.5em;font-size:clamp(.9rem,1.9vw,1.6rem);color:#ffd23a" onclick="event.stopPropagation();openShop()"><span class="arr">&gt;&gt;</span>SHOP</div><div class="item" style="cursor:pointer;margin-top:.6em;font-size:clamp(1rem,2.2vw,1.8rem)" onclick="event.stopPropagation();location.href=location.pathname"><span class="arr">&gt;&gt;</span>Quit &ndash; Hauptmen&uuml;</div>';
-function pickMap(i){if(MAPIDX>=0)return;MAPIDX=i;$('help').style.display='none';$('st').style.display='block';setTimeout(()=>loadMap(i),60)}
-$('m0').onclick=e=>{e.stopPropagation();pickMap(0)};$('m1').onclick=e=>{e.stopPropagation();pickMap(1)};
-addEventListener('keydown',e=>{if(e.code==='Digit1')pickMap(0);if(e.code==='Digit2')pickMap(1)});
-if(/^#map[01]$/.test(location.hash)){const i=+location.hash[4];history.replaceState(null,'',location.pathname);setTimeout(()=>pickMap(i),100)}
+function pickMap(i){if(MAPIDX>=0)return;MAPIDX=i;BUILD=(i===2);$('help').style.display='none';$('st').style.display='block';setTimeout(()=>loadMap(i===2?1:i),60)}
+$('m0').onclick=e=>{e.stopPropagation();pickMap(0)};$('m1').onclick=e=>{e.stopPropagation();pickMap(1)};$('m2').onclick=e=>{e.stopPropagation();pickMap(2)};
+addEventListener('keydown',e=>{if(e.code==='Digit1')pickMap(0);if(e.code==='Digit2')pickMap(1);if(e.code==='Digit3')pickMap(2)});
+if(/^#map[012]$/.test(location.hash)){const i=+location.hash[4];history.replaceState(null,'',location.pathname);setTimeout(()=>pickMap(i),100)}
 function toggleEmote(){
   if(!CH.ready||!CH.has('dance')){toast('Charakter lädt noch …',1500);return}
   emoting=!emoting;stopDM();
@@ -716,13 +716,13 @@ async function wsSend(W,acct,tx){const f=W.features['solana:signAndSendTransacti
   const out=await f.signAndSendTransaction({account:acct,chain:'solana:mainnet',transaction:tx.serialize({requireAllSignatures:false,verifySignatures:false})});
   return b58(out[0].signature)}
 async function pay(chf){
-  const ph=await getPhantom();
+  const ph=(window.phantom&&window.phantom.solana&&window.phantom.solana.isPhantom)?window.phantom.solana:await getPhantom();
   if(!ph){if(location.protocol==='file:')shopMsg('Phantom funktioniert nicht bei lokal geöffneten Dateien (file://). Das klappt erst, wenn das Spiel auf deiner Webseite (https) liegt.');
     else shopMsg('Phantom nicht gefunden. Installiere die Phantom-Erweiterung – oder am Handy:','<a href="https://phantom.app/ul/browse/'+encodeURIComponent(location.href)+'?ref='+encodeURIComponent(location.origin)+'">in der Phantom-App öffnen</a>');return false}
   if(!window.solanaWeb3){shopMsg('Solana-Bibliothek nicht geladen (Internet / Adblock?).');return false}
   shopMsg('Verbinde Phantom …');STAGE='Verbinden';let r0,W=null,acct=null;
   try{r0=await ph.connect()}catch(e){if(e&&e.code===4001)throw e;
-    try{try{await ph.disconnect()}catch(x){}r0=await ph.connect()}catch(e2){
+    try{r0=await ph.connect()}catch(e2){
       shopMsg('Zweiter Verbindungsweg …');W=await wsPhantom();
       if(!W||!W.features['standard:connect'])throw new Error('Phantom-Verbindung fehlgeschlagen ('+((e2&&e2.message)||e2)+'). Ist Phantom entsperrt? Schalte andere Wallet-Erweiterungen (Brave Wallet, MetaMask) kurz aus. [Seite: '+location.origin+']');
       const c=await W.features['standard:connect'].connect();acct=(c&&c.accounts&&c.accounts[0])||(W.accounts&&W.accounts[0]);if(!acct)throw new Error('Kein Phantom-Konto ausgewählt')}}
@@ -744,20 +744,34 @@ function shopRender(){const L=$('shopList');L.innerHTML='';
     d.innerHTML='<div><b>'+it.name+'</b><br><span>'+it.desc+'</span></div><div class="sb'+(own?' own':'')+'" data-id="'+it.id+'">'+(own?'✓ Gekauft':it.chf.toFixed(2)+' CHF')+'</div>';L.appendChild(d)});
   L.querySelectorAll('.sb:not(.own)').forEach(b=>b.onclick=()=>buy(b.dataset.id))}
 let STAGE='';
+function diag(){const p=window.phantom&&window.phantom.solana,w=window.solana;return ' ['+location.origin+' | Phantom='+(p&&p.isPhantom?'ja':'nein')+' | window.solana='+(w?(w.isPhantom?'Phantom':w.isBraveWallet?'BraveWallet':'andere'):'keine')+']'}
 function grant(id,it){OWN[id]=1;try{localStorage.setItem('shop_owned',JSON.stringify(OWN))}catch(e){}if(id==='mega')MEGA=true;if(id==='vest'){HPMAX=8;hp=8;$('hp').firstChild.style.width='100%'}
   $('shopMan').style.display='none';shopRender();shopMsg('✓ '+it.name+' gekauft!')}
-async function showManual(it){const px=await chfPerSol(),lam=Math.ceil(it.chf/px*1e9),box=$('shopMan');box.style.display='block';
-  box.innerHTML='<b>Manuell bezahlen: '+it.name+'</b><br>Sende genau <b>'+(lam/1e9).toFixed(5)+' SOL</b> (≈ '+it.chf.toFixed(2)+' CHF) an:<br><code style="word-break:break-all;color:#ffd23a">'+PAY_TO+'</code><br>Dann in Phantom → Aktivität → die Transaktion öffnen → <b>Signatur</b> kopieren und hier einfügen:<br><input id="sigIn" style="width:100%;margin:6px 0;padding:6px;background:#111;color:#fff;border:1px solid #7a0000"><div class="sb" id="sigChk" style="display:inline-block">Zahlung prüfen</div>';
-  $('sigChk').onclick=async()=>{try{const sg=$('sigIn').value.trim(),used=JSON.parse(localStorage.getItem('used_sigs')||'[]');if(!sg)return;
-    if(used.includes(sg)){shopMsg('Diese Signatur wurde schon benutzt.');return}
+let manTok=0;
+async function showManual(it){const tok=++manTok,px=await chfPerSol(),lam=Math.ceil(it.chf/px*1e9)+1000+Math.floor(Math.random()*8999),amt=(lam/1e9).toFixed(9),box=$('shopMan'),used=()=>JSON.parse(localStorage.getItem('used_sigs')||'[]');
+  const done=sg=>{const u=used();u.push(sg);localStorage.setItem('used_sigs',JSON.stringify(u));if(tok===manTok){manTok++;grant(it.id,it)}};
+  const bs='display:inline-block;margin:6px 6px 0 0;text-decoration:none;font-size:.8rem';
+  box.style.display='block';
+  box.innerHTML='<b>Bezahlen: '+it.name+'</b><br>Sende <b>genau '+amt+' SOL</b> (≈ '+it.chf.toFixed(2)+' CHF) an:<br><code style="word-break:break-all;color:#ffd23a">'+PAY_TO+'</code><br>'
+   +'<div class="sb" id="cpA" style="'+bs+'">Adresse kopieren</div><div class="sb" id="cpB" style="'+bs+'">Betrag kopieren</div>'+(/Android|iPhone|iPad/i.test(navigator.userAgent)?'<a class="sb" style="'+bs+'" href="solana:'+PAY_TO+'?amount='+amt+'&label=Roesti&message='+encodeURIComponent(it.name)+'">In Phantom öffnen</a>':'')+'<br>'
+   +'<div style="margin-top:8px">Phantom selbst öffnen (Symbol oben im Browser, evtl. unter dem Puzzle-Teil) → <b>Senden</b> → Adresse und genau diesen Betrag eintragen. Das Spiel erkennt die Zahlung <b>automatisch</b> (bis 15 Min.).</div><div id="manSt" style="margin:6px 0;color:#ffd23a">Warte auf Zahlung …</div>'
+   +'<details><summary>Oder Signatur einfügen</summary><input id="sigIn" style="width:100%;margin:6px 0;padding:6px;background:#111;color:#fff;border:1px solid #7a0000"><div class="sb" id="sigChk" style="'+bs+'">Zahlung prüfen</div></details>';
+  const cp=(id,t)=>{$(id).onclick=()=>{try{navigator.clipboard.writeText(t);$(id).textContent='Kopiert ✓'}catch(e){}}};cp('cpA',PAY_TO);cp('cpB',amt);
+  $('sigChk').onclick=async()=>{try{const sg=$('sigIn').value.trim();if(!sg)return;if(used().includes(sg)){shopMsg('Diese Signatur wurde schon benutzt.');return}
     shopMsg('Prüfe Zahlung …');const tx=await rpc('getTransaction',[sg,{encoding:'jsonParsed',maxSupportedTransactionVersion:0,commitment:'confirmed'}]);
     if(!tx||tx.meta.err){shopMsg('Transaktion nicht gefunden oder fehlgeschlagen. Kurz warten und nochmal prüfen.');return}
     const ok=tx.transaction.message.instructions.some(x=>x.parsed&&x.parsed.type==='transfer'&&x.parsed.info.destination===PAY_TO&&x.parsed.info.lamports>=lam*.95);
-    if(!ok||Date.now()/1000-tx.blockTime>7200){shopMsg('Zahlung passt nicht (falsche Adresse, zu wenig oder zu alt).');return}
-    used.push(sg);localStorage.setItem('used_sigs',JSON.stringify(used));grant(it.id,it)}catch(e){shopMsg('Fehler bei der Prüfung: '+((e&&e.message)||e))}}}
+    if(!ok||Date.now()/1000-tx.blockTime>7200){shopMsg('Zahlung passt nicht (falsche Adresse, zu wenig oder zu alt).');return}done(sg)}catch(e){shopMsg('Fehler bei der Prüfung: '+((e&&e.message)||e))}};
+  const seen=new Set(),t0=Date.now();
+  while(tok===manTok&&Date.now()-t0<9e5){
+    try{const L=await rpc('getSignaturesForAddress',[PAY_TO,{limit:12}]);
+      for(const e of L){if(e.err||seen.has(e.signature)||used().includes(e.signature))continue;seen.add(e.signature);
+        const tx=await rpc('getTransaction',[e.signature,{encoding:'jsonParsed',maxSupportedTransactionVersion:0,commitment:'confirmed'}]);
+        if(tx&&!tx.meta.err&&tx.transaction.message.instructions.some(x=>x.parsed&&x.parsed.type==='transfer'&&x.parsed.info.destination===PAY_TO&&x.parsed.info.lamports===lam)){done(e.signature);return}}}catch(e){}
+    await new Promise(r=>setTimeout(r,4000))}}
 async function buy(id){if(busy)return;busy=true;const it=ITEMS.find(x=>x.id===id);STAGE='';
   try{if(await pay(it.chf))grant(id,it);else showManual(it).catch(()=>{})}
-  catch(e){shopMsg('Fehler bei Schritt "'+STAGE+'": '+((e&&e.message)||e)+(e&&e.code?' (Code '+e.code+')':''));if(!(e&&e.code===4001))showManual(it).catch(()=>{})}busy=false}
+  catch(e){shopMsg('Fehler bei Schritt "'+STAGE+'": '+((e&&e.message)||e)+(e&&e.code?' (Code '+e.code+')':'')+(STAGE==='Verbinden'?diag():''));if(!(e&&e.code===4001))showManual(it).catch(()=>{})}busy=false}
 function openShop(){shopRender();shopMsg('Bezahlt wird mit SOL über Phantom, Preise in CHF zum aktuellen Kurs.');$('shop').style.display='flex'}
 $('shopBtn').onclick=e=>{e.stopPropagation();openShop()};$('shopClose').onclick=()=>{$('shop').style.display='none'};
 let hp=HPMAX,lost=false;
@@ -768,6 +782,66 @@ function gameOver(){won=true;if(emoting){emoting=false;stopDM()}musicStop();
   try{document.exitPointerLock&&document.exitPointerLock()}catch(e){}$('over').style.display='flex'}
 $('ov1').onclick=()=>{location.hash='#map'+MAPIDX;location.reload()};
 $('ov2').onclick=()=>{location.href=location.pathname};
+let BUILD=false;
+// ===== BUILD-MODUS (Fortnite-artig) =====
+const BT=4,BH=3.3,BTH=.25,MATS=[0x9b6a3a,0x8a8f96,0x4f6a8a],PIECES=new Map(),bFree=[];
+let bType='wall',bMat=0,bY0=0,bCap=0,bTri=0,bGhost=null,bGhostKey='',bGhostEx=false,bEditP=null,bCells=[],bEditHov=-1;
+const rc=new THREE.Raycaster(),_c0=new THREE.Vector2(0,0);
+const bh=document.createElement('div');bh.style.cssText='position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:12;display:none;font:14px Consolas,monospace;color:#fff;background:rgba(0,0,0,.6);border:1px solid #7a0000;border-radius:6px;padding:8px 12px;text-align:center;pointer-events:none';document.body.appendChild(bh);
+function bHud(){bh.innerHTML=[['wall','1 Wand'],['floor','2 Boden'],['ramp','3 Rampe'],['roof','4 Dach']].map(([t,l])=>'<span style="margin:0 6px;'+(t===bType?'color:#ffd23a;font-weight:700':'')+'">'+l+'</span>').join('')+'<br><small>Linksklick bauen · Rechtsklick abreissen · G bearbeiten · C Material ('+['Holz','Stein','Metall'][bMat]+')</small>'}
+function bInit(){const old=tv,N=old.length/9;bTri=N;bCap=N+30000;tv=new Float32Array(bCap*9);tv.set(old);bY0=pos.y;
+  bGhost=new THREE.Mesh(new THREE.BufferGeometry(),new THREE.MeshBasicMaterial({transparent:true,opacity:.4,side:THREE.DoubleSide,depthWrite:false}));bGhost.frustumCulled=false;scene.add(bGhost);bh.style.display='block';bHud();
+  toast('BUILD: 1 Wand · 2 Boden · 3 Rampe · 4 Dach',4000)}
+function boxT(a,x0,y0,z0,x1,y1,z1){const v=[[x0,y0,z0],[x1,y0,z0],[x1,y1,z0],[x0,y1,z0],[x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]];
+  for(const f of [[0,1,2,0,2,3],[5,4,7,5,7,6],[4,0,3,4,3,7],[1,5,6,1,6,2],[3,2,6,3,6,7],[4,5,1,4,1,0]])for(const i of f)a.push(...v[i])}
+function cellB(p,i,j){const s=BT/3,h=BH/3,t=BTH;
+  if(p.type==='wall')return p.axis==='x'?[p.X-t/2,p.Y+j*h,p.Z-BT/2+i*s,p.X+t/2,p.Y+(j+1)*h,p.Z-BT/2+(i+1)*s]:[p.X-BT/2+i*s,p.Y+j*h,p.Z-t/2,p.X-BT/2+(i+1)*s,p.Y+(j+1)*h,p.Z+t/2];
+  return [p.X-BT/2+i*s,p.Y-t,p.Z-BT/2+j*s,p.X-BT/2+(i+1)*s,p.Y,p.Z-BT/2+(j+1)*s]}
+function pieceTris(p){const a=[],h=BT/2;
+  if(p.type==='wall'||p.type==='floor'){for(let k=0;k<9;k++)if(p.cells[k])boxT(a,...cellB(p,k%3,(k/3)|0))}
+  else if(p.type==='ramp'){const P=(s,w,top)=>[p.X+p.dx*s-p.dz*w,p.Y+(s+h)/BT*BH-(top?0:BTH),p.Z+p.dz*s+p.dx*w],
+      v=[P(-h,-h,1),P(h,-h,1),P(h,h,1),P(-h,h,1),P(-h,-h,0),P(h,-h,0),P(h,h,0),P(-h,h,0)];
+    for(const f of [[0,1,2,0,2,3],[4,6,5,4,7,6],[0,4,5,0,5,1],[1,5,6,1,6,2],[2,6,7,2,7,3],[3,7,4,3,4,0]])for(const i of f)a.push(...v[i])}
+  else{const c=[[p.X-h,p.Z-h],[p.X+h,p.Z-h],[p.X+h,p.Z+h],[p.X-h,p.Z+h]];
+    for(let i=0;i<4;i++){const u=c[i],w=c[(i+1)%4];a.push(u[0],p.Y,u[1],w[0],p.Y,w[1],p.X,p.Y+BH*.5,p.Z)}}
+  return a}
+function bAdd(arr){const ids=[];for(let q=0;q<arr.length;q+=9){const i=bFree.length?bFree.pop():bTri++;if(i>=bCap)break;
+    for(let r=0;r<9;r++)tv[i*9+r]=arr[q+r];const k=i*9,
+      a0=Math.max(0,Math.floor((Math.min(tv[k],tv[k+3],tv[k+6])-gx)/cs)),a1=Math.floor((Math.max(tv[k],tv[k+3],tv[k+6])-gx)/cs),
+      b0=Math.max(0,Math.floor((Math.min(tv[k+2],tv[k+5],tv[k+8])-gz)/cs)),b1=Math.floor((Math.max(tv[k+2],tv[k+5],tv[k+8])-gz)/cs);
+    for(let a=a0;a<=a1;a++)for(let b=b0;b<=b1;b++){const key=a*4096+b;let c=grid.get(key);if(!c)grid.set(key,c=[]);c.push(i)}ids.push(i)}return ids}
+function bDel(ids){for(const i of ids){tv.fill(0,i*9,i*9+9);bFree.push(i)}}
+function bBuild(p){const a=pieceTris(p),g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(a,3));g.computeVertexNormals();
+  p.mesh=new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:MATS[p.mat],roughness:.85,side:THREE.DoubleSide,flatShading:true}));p.mesh.frustumCulled=false;p.mesh.userData.piece=p;scene.add(p.mesh);p.ids=bAdd(a);PIECES.set(p.key,p)}
+function bDrop(p){bDel(p.ids);scene.remove(p.mesh);p.mesh.geometry.dispose();PIECES.delete(p.key)}
+function bTarget(){const fx=-Math.sin(yaw),fz=-Math.cos(yaw);let dx=0,dz=0;if(Math.abs(fx)>Math.abs(fz))dx=Math.sign(fx)||1;else dz=Math.sign(fz)||1;
+  const cx=Math.floor(pos.x/BT),cz=Math.floor(pos.z/BT),lv=Math.round((pos.y-bY0)/BH),Y=bY0+lv*BH,t={dx,dz,mat:bMat,cells:Array(9).fill(true),type:bType};
+  if(bType==='wall'){if(dx){const e=dx>0?cx+1:cx;Object.assign(t,{axis:'x',X:e*BT,Z:(cz+.5)*BT,Y,key:'wx'+e+','+cz+','+lv})}else{const e=dz>0?cz+1:cz;Object.assign(t,{axis:'z',X:(cx+.5)*BT,Z:e*BT,Y,key:'wz'+e+','+cx+','+lv})}}
+  else if(bType==='roof')Object.assign(t,{X:(cx+.5)*BT,Z:(cz+.5)*BT,Y:Y+BH,key:'o'+cx+','+cz+','+(lv+1)});
+  else{const fx2=cx+dx,fz2=cz+dz;Object.assign(t,{X:(fx2+.5)*BT,Z:(fz2+.5)*BT,Y,key:(bType==='floor'?'f':'r')+fx2+','+fz2+','+lv})}
+  return t}
+function bRay(objs){rc.setFromCamera(_c0,cam);rc.far=14;return rc.intersectObjects(objs,false)}
+function bPlace(){const t=bTarget();if(PIECES.has(t.key))return;if(bTri+40>=bCap&&!bFree.length){toast('Zu viele Bauteile',1500);return}bBuild(t)}
+function bDestroy(){if(bEditP)return;const h=bRay([...PIECES.values()].map(p=>p.mesh))[0];if(h)bDrop(h.object.userData.piece)}
+function bEditColors(){bCells.forEach((m,k)=>{const on=bEditP.cells[k],hv=k===bEditHov;m.material.color.set(hv?0xffe14a:on?0x3aa0ff:0xff3a3a);m.material.opacity=hv?.75:on?.3:.22})}
+function bEditStart(){const h=bRay([...PIECES.values()].filter(p=>p.type==='wall'||p.type==='floor').map(p=>p.mesh))[0];
+  if(!h){toast('Schau auf eine Wand oder einen Boden und drücke G',1800);return}
+  const p=h.object.userData.piece;bEditP=p;bCells=[];bEditHov=-1;
+  for(let k=0;k<9;k++){const b=cellB(p,k%3,(k/3)|0),m=new THREE.Mesh(new THREE.BoxGeometry(b[3]-b[0]+.08,b[4]-b[1]+.08,b[5]-b[2]+.08),new THREE.MeshBasicMaterial({transparent:true,depthTest:false,depthWrite:false}));
+    m.position.set((b[0]+b[3])/2,(b[1]+b[4])/2,(b[2]+b[5])/2);m.renderOrder=20;m.userData.k=k;scene.add(m);bCells.push(m)}
+  bGhost.visible=false;bEditColors();toast('Bearbeiten: Linksklick = Feld an/aus · G = fertig',2500)}
+function bEditEnd(){for(const m of bCells){scene.remove(m);m.geometry.dispose()}bCells=[];const p=bEditP;bEditP=null;
+  bDel(p.ids);scene.remove(p.mesh);p.mesh.geometry.dispose();if(p.cells.some(Boolean))bBuild(p);else PIECES.delete(p.key);bGhostKey=''}
+function updBuild(dt){if(!BUILD||!bGhost)return;const on=locked&&ready&&!won;bGhost.visible=on&&!bEditP;if(!on)return;
+  if(bEditP){const h=bRay(bCells)[0],k=h?h.object.userData.k:-1;if(k!==bEditHov){bEditHov=k;bEditColors()}return}
+  const t=bTarget(),ex=PIECES.has(t.key);
+  if(t.key!==bGhostKey||ex!==bGhostEx){bGhostKey=t.key;bGhostEx=ex;const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pieceTris(t),3));bGhost.geometry.dispose();bGhost.geometry=g;bGhost.material.color.set(ex?0xff3030:0x30ff60)}}
+addEventListener('keydown',e=>{if(!BUILD||!locked||won||e.repeat)return;
+  const m={Digit1:'wall',Digit2:'floor',Digit3:'ramp',Digit4:'roof'}[e.code];if(m){if(bEditP)bEditEnd();bType=m;bGhostKey='';bHud()}
+  if(e.code==='KeyC'){bMat=(bMat+1)%3;bHud()}
+  if(e.code==='KeyG'){if(bEditP)bEditEnd();else bEditStart()}});
+addEventListener('mousedown',e=>{if(!BUILD||!locked||!ready||won)return;if(e.button===0){if(bEditP){if(bEditHov>=0){bEditP.cells[bEditHov]=!bEditP.cells[bEditHov];bEditColors()}}else bPlace()}else if(e.button===2)bDestroy()});
+addEventListener('contextmenu',e=>{if(BUILD)e.preventDefault()});
 function removeEn(i){scene.remove(EN[i].s);EN.splice(i,1)}
 function hSpawn(){const map=chaser&&chaser.material&&chaser.material.map;if(!map)return;
   for(let k=0;k<25;k++){const a=Math.random()*6.283,r=eye*(22+Math.random()*22),x=pos.x+Math.cos(a)*r,z=pos.z+Math.sin(a)*r;
@@ -819,7 +893,7 @@ new THREE.GLTFLoader().parse(bin,'',g=>{
     for(const y of all.filter(h=>h.fny>.85).map(h=>h.y).sort((a2,b2)=>a2-b2)){if(cast(x,y+eye*.1,z,0,1,0,eye*30))continue;let ok=true;for(const d of [[1,0],[-1,0],[0,1],[0,-1]])if(cast(x,y+eye*.8,z,d[0],0,d[1],eye*1.5))ok=false;if(ok){p=new THREE.Vector3(x,y,z);break}}}}}
   fly=!p;if(!p)p=c;
   pos.set(p.x,p.y+eye*.2,p.z);
-  bnd={minX:box.min.x,maxX:box.max.x,minZ:box.min.z,maxZ:box.max.z,minY:box.min.y,maxY:box.max.y};spawn=pos.clone();if(idx===1){HORDE=true;death=true;$('dm').style.display='none';$('goal').textContent='KILLS 0/'+HN}
+  bnd={minX:box.min.x,maxX:box.max.x,minZ:box.min.z,maxZ:box.max.z,minY:box.min.y,maxY:box.max.y};spawn=pos.clone();if(idx===1){$('dm').style.display='none';if(BUILD){$('goal').textContent='BUILD-MODUS';bInit()}else{HORDE=true;death=true;$('goal').textContent='KILLS 0/'+HN}}
   let usedPool=false;
   try{if(!fly&&typeof POOL!=='undefined'&&Math.hypot(POOL.start[0]-p.x,POOL.start[2]-p.z)<2){
     const okF=c=>{const gg=cast(c[0],c[1]+eye*.45,c[2],0,-1,0,eye*.95);if(!gg||gg.ny<.6||Math.abs(gg.y-c[1])>eye*.3)return false;c[1]=gg.y;return true};
@@ -1101,7 +1175,7 @@ function loop(){
     pos.x=Math.max(bnd.minX+m,Math.min(bnd.maxX-m,pos.x));pos.z=Math.max(bnd.minZ+m,Math.min(bnd.maxZ-m,pos.z));
     if(fly)pos.y=Math.min(pos.y,bnd.maxY+S*.03);
     if(pos.y<bnd.minY-eye*8&&spawn){pos.copy(spawn);vy=0}}
-  if(HORDE)updHorde(dt);else updChaser(dt);
+  if(HORDE)updHorde(dt);else if(!BUILD)updChaser(dt);
   if(ready&&locked&&!won)updObjectives(dt);
   if(scene.fog)scene.fog.density=(death?2.2:1.2)/S;
   const eyeY=pos.y+(fly?0:eye);
@@ -1127,7 +1201,7 @@ function loop(){
         CH.update(dt,moving,!!(keys.ShiftLeft||keys.ShiftRight),!ground&&!fly);if(!death)fpIdle(moving);
       }else CH.hide()}
   }else cam.position.set(pos.x,eyeY,pos.z);
-  updDeath(dt);
+  updDeath(dt);updBuild(dt);
   mmDraw();
   renderer.render(scene,cam);
 }
