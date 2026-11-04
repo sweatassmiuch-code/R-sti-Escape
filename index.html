@@ -73,7 +73,7 @@ canvas{display:block;width:100%;height:100%}
 <button id="dm" class="bt" type="button">Death Mode</button>
 <h1 id="ttl">Rösti<br>Escape</h1>
 <p id="st" style="display:none">Lade Map …</p><div class="bar" id="bar"></div>
-<div id="help"><div class="item" id="m0" style="cursor:pointer"><span class="arr">&gt;&gt;</span>1 &middot; City of the Night</div><div class="item" id="m1" style="cursor:pointer"><span class="arr">&gt;&gt;</span>2 &middot; Streets of Crime (Horde)</div><div class="item" id="m2" style="cursor:pointer"><span class="arr">&gt;&gt;</span>3 &middot; Streets of Crime (Build)</div><div class="item" style="font-size:clamp(.8rem,1.5vw,1.25rem);color:#aaa;margin-top:.5em;padding-left:3.6ch">Map w&auml;hlen: Klick oder Taste 1 / 2</div><div class="item" id="shopBtn" style="cursor:pointer;margin-top:.7em;font-size:clamp(.9rem,1.9vw,1.6rem);color:#ffd23a;text-shadow:0 0 10px rgba(255,200,0,.6)"><span class="arr">&gt;&gt;</span>SHOP &ndash; Powerups (Phantom / Solana)</div></div>
+<div id="help"><div class="item" id="m0" style="cursor:pointer"><span class="arr">&gt;&gt;</span>1 &middot; City of the Night</div><div class="item" id="m1" style="cursor:pointer"><span class="arr">&gt;&gt;</span>2 &middot; Streets of Crime (Horde)</div><div class="item" id="m2" style="cursor:pointer"><span class="arr">&gt;&gt;</span>3 &middot; Streets of Crime (Build)</div><div class="item" style="font-size:clamp(.8rem,1.5vw,1.25rem);color:#aaa;margin-top:.5em;padding-left:3.6ch">Map w&auml;hlen: Klick oder Taste 1 / 2</div><div class="item" id="shopBtn" style="cursor:pointer;margin-top:.7em;font-size:clamp(.9rem,1.9vw,1.6rem);color:#ffd23a;text-shadow:0 0 10px rgba(255,200,0,.6)"><span class="arr">&gt;&gt;</span>SHOP &ndash; Powerups (Phantom / Solana)</div><div class="item" id="setBtn" style="cursor:pointer;margin-top:.5em;font-size:clamp(.9rem,1.9vw,1.6rem);color:#9fd4ff"><span class="arr">&gt;&gt;</span>SETTINGS &ndash; Tasten</div></div>
 <div class="ver">v 1.0</div><div class="cr">©2026 Rösti Escape</div>
 </div>
 <script>
@@ -669,7 +669,7 @@ function buildGrid(root,box){
 
 // ===== Maps / Horde / Emote =====
 let MAPIDX=-1,HORDE=false,emoting=false,emoPrev=false;const HN=30,EN=[];let hT=0,hSpawnT=2,hKills=0;
-const HELP_PLAY='<div class="item"><span class="arr">&gt;&gt;</span>Play</div><div class="item" style="font-size:clamp(.8rem,1.5vw,1.25rem);color:#aaa;margin-top:.5em;padding-left:3.6ch">Q &ndash; Kamera &middot; E &ndash; Emote/Tanz (nochmal E = Stopp) &middot; Esc = Pause</div><div class="item" style="cursor:pointer;margin-top:.5em;font-size:clamp(.9rem,1.9vw,1.6rem);color:#ffd23a" onclick="event.stopPropagation();openShop()"><span class="arr">&gt;&gt;</span>SHOP</div><div class="item" style="cursor:pointer;margin-top:.6em;font-size:clamp(1rem,2.2vw,1.8rem)" onclick="event.stopPropagation();location.href=location.pathname"><span class="arr">&gt;&gt;</span>Quit &ndash; Hauptmen&uuml;</div>';
+const HELP_PLAY='<div class="item"><span class="arr">&gt;&gt;</span>Play</div><div class="item" style="font-size:clamp(.8rem,1.5vw,1.25rem);color:#aaa;margin-top:.5em;padding-left:3.6ch">Q &ndash; Kamera &middot; E &ndash; Emote/Tanz (nochmal E = Stopp) &middot; Esc = Pause</div><div class="item" style="cursor:pointer;margin-top:.5em;font-size:clamp(.9rem,1.9vw,1.6rem);color:#ffd23a" onclick="event.stopPropagation();openShop()"><span class="arr">&gt;&gt;</span>SHOP</div><div class="item" style="cursor:pointer;margin-top:.5em;font-size:clamp(.9rem,1.9vw,1.6rem);color:#9fd4ff" onclick="event.stopPropagation();openSettings()"><span class="arr">&gt;&gt;</span>SETTINGS &ndash; Tasten</div><div class="item" style="cursor:pointer;margin-top:.6em;font-size:clamp(1rem,2.2vw,1.8rem)" onclick="event.stopPropagation();location.href=location.pathname"><span class="arr">&gt;&gt;</span>Quit &ndash; Hauptmen&uuml;</div>';
 function pickMap(i){if(MAPIDX>=0)return;MAPIDX=i;BUILD=(i===2);$('help').style.display='none';$('st').style.display='block';setTimeout(()=>loadMap(i===2?1:i),60)}
 $('m0').onclick=e=>{e.stopPropagation();pickMap(0)};$('m1').onclick=e=>{e.stopPropagation();pickMap(1)};$('m2').onclick=e=>{e.stopPropagation();pickMap(2)};
 addEventListener('keydown',e=>{if(e.code==='Digit1')pickMap(0);if(e.code==='Digit2')pickMap(1);if(e.code==='Digit3')pickMap(2)});
@@ -842,6 +842,39 @@ addEventListener('keydown',e=>{if(!BUILD||!locked||won||e.repeat)return;
   if(e.code==='KeyG'){if(bEditP)bEditEnd();else bEditStart()}});
 addEventListener('mousedown',e=>{if(!BUILD||!locked||!ready||won)return;if(e.button===0){if(bEditP){if(bEditHov>=0){bEditP.cells[bEditHov]=!bEditP.cells[bEditHov];bEditColors()}}else bPlace()}else if(e.button===2)bDestroy()});
 addEventListener('contextmenu',e=>{if(BUILD)e.preventDefault()});
+// ===== SETTINGS: Tasten belegen =====
+const ACTS=[['forward','Vorwärts','KeyW'],['back','Rückwärts','KeyS'],['left','Links','KeyA'],['right','Rechts','KeyD'],['jump','Springen','Space'],['sprint','Sprinten','ShiftLeft'],
+  ['down','Runter (Fliegen)','ControlLeft'],['fly','Fliegen an/aus','KeyF'],['cam','Kamera wechseln','KeyQ'],['emote','Emote / Tanz','KeyE'],['mute','Ton an/aus','KeyM'],
+  ['bwall','Bauen: Wand','Digit1'],['bfloor','Bauen: Boden','Digit2'],['bramp','Bauen: Rampe','Digit3'],['broof','Bauen: Dach','Digit4'],['bmat','Bauen: Material','KeyC'],['bedit','Bauen: Bearbeiten','KeyG']];
+const KB_EXTRA={sprint:['ShiftRight']};
+let KB={};try{KB=JSON.parse(localStorage.getItem('keybinds')||'{}')}catch(e){}
+const kbOf=a=>KB[a[0]]||a[2];
+let KMAP={},rebind=null;
+function kbBuild(){KMAP={};for(const a of ACTS)KMAP[kbOf(a)]=a[2];
+  for(const a of ACTS){const cs=[a[2]];if(kbOf(a)!==a[2])cs.push(...(KB_EXTRA[a[0]]||[]));for(const c of cs)if(!(c in KMAP))KMAP[c]=null}}
+kbBuild();
+function kbName(c){return c.replace(/^Key/,'').replace(/^Digit/,'').replace('Space','Leertaste').replace('ShiftLeft','Shift links').replace('ShiftRight','Shift rechts').replace('ControlLeft','Strg links').replace('ControlRight','Strg rechts').replace('Arrow','Pfeil ')}
+function kbRender(){const L=document.getElementById('setList');L.innerHTML='';
+  for(const a of ACTS){const d=document.createElement('div');d.className='si';const cur=kbOf(a);
+    d.innerHTML='<div>'+a[1]+'</div><div class="sb" style="min-width:110px;text-align:center">'+(rebind===a[0]?'… Taste drücken':kbName(cur))+'</div>';
+    d.lastChild.onclick=()=>{rebind=a[0];kbRender()};L.appendChild(d)}}
+const setp=document.createElement('div');setp.style.cssText='position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:151;background:rgba(0,0,0,.85);font-family:Consolas,"Lucida Console",monospace;color:#fff';
+setp.innerHTML='<div style="width:min(560px,94vw);max-height:92vh;overflow:auto;border:2px solid #7a0000;border-radius:6px;background:#0b0505;padding:16px 18px"><h3 style="margin:0 0 10px;color:#ffd23a;letter-spacing:.2em;text-align:center">SETTINGS &ndash; TASTEN</h3><div id="setList"></div><div style="font-size:.8rem;color:#aaa;margin:8px 0">Klicke auf eine Taste und drücke dann die neue. Esc bricht ab. Ist die Taste schon belegt, tauschen die beiden. Maus: Links = Schießen/Bauen, Rechts = Abreißen.</div><div style="display:flex;gap:10px;justify-content:center"><div class="sb" id="setReset">Zurücksetzen</div><div class="sb" id="setClose">Schließen</div></div></div>';
+document.body.appendChild(setp);
+function openSettings(){rebind=null;kbRender();setp.style.display='flex'}
+document.getElementById('setClose').onclick=()=>{rebind=null;setp.style.display='none'};
+document.getElementById('setReset').onclick=()=>{KB={};try{localStorage.removeItem('keybinds')}catch(e){}rebind=null;kbBuild();kbRender()};
+$('setBtn').onclick=e=>{e.stopPropagation();openSettings()};
+function kbSet(id,code){const a=ACTS.find(x=>x[0]===id),old=kbOf(a),o=ACTS.find(x=>x[0]!==id&&kbOf(x)===code);
+  if(o)KB[o[0]]=old;KB[id]=code;try{localStorage.setItem('keybinds',JSON.stringify(KB))}catch(e){}kbBuild()}
+function kbHandle(e){if(e.isTrusted===false)return;
+  if(rebind&&e.type==='keydown'){e.preventDefault();e.stopImmediatePropagation();if(e.code!=='Escape')kbSet(rebind,e.code);rebind=null;kbRender();return}
+  if(rebind){e.preventDefault();e.stopImmediatePropagation();return}
+  if(MAPIDX<0)return;const t=e.target&&e.target.tagName;if(t==='INPUT'||t==='TEXTAREA')return;
+  if(!(e.code in KMAP))return;const to=KMAP[e.code];if(to===e.code)return;
+  e.stopImmediatePropagation();e.preventDefault();
+  if(to)document.dispatchEvent(new KeyboardEvent(e.type,{code:to,key:to,repeat:e.repeat,bubbles:true,cancelable:true}))}
+window.addEventListener('keydown',kbHandle,true);window.addEventListener('keyup',kbHandle,true);
 function removeEn(i){scene.remove(EN[i].s);EN.splice(i,1)}
 function hSpawn(){const map=chaser&&chaser.material&&chaser.material.map;if(!map)return;
   for(let k=0;k<25;k++){const a=Math.random()*6.283,r=eye*(22+Math.random()*22),x=pos.x+Math.cos(a)*r,z=pos.z+Math.sin(a)*r;
